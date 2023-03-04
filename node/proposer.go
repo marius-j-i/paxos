@@ -77,7 +77,7 @@ func (n *Node) postPropose(v string) (int, error) {
 		/* v' is either nodes' value or new accepted value.
 		 * Update self for consensus, then
 		 * propose with new proposal N and same request-value v. */
-		if err := n.Commit(NPrime, vPrime); err != nil {
+		if err := n.commit(NPrime, vPrime); err != nil {
 			code = http.StatusInternalServerError
 			return code, err
 		}
@@ -91,7 +91,7 @@ func (n *Node) postPropose(v string) (int, error) {
 	/* Accept-phase. */
 	NPrime, _ = n.Accept(N, v)
 	if NPrime >= N {
-		log.Info("proposal accept phase with N' >= N: %d >= %d", NPrime, N)
+		log.Infof("proposal accept phase with N' >= N: %d >= %d", NPrime, N)
 	}
 
 	/* Commit proposal.
@@ -100,7 +100,7 @@ func (n *Node) postPropose(v string) (int, error) {
 	 * then a new proposal is in motion,
 	 * but this proposal is completed.
 	 * Quorum of acceptors may or may not be updated. */
-	if err := n.Commit(N, v); err != nil {
+	if err := n.commit(N, v); err != nil {
 		code = http.StatusInternalServerError
 		return code, err
 	}

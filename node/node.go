@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"path"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -49,10 +46,7 @@ type Node struct {
 
 /* Return new node.
  */
-func NewNode(r Role, host, port string, network map[string]Role) (*Node, error) {
-
-	/* Address for this node. */
-	addr := net.JoinHostPort(host, port)
+func NewNode(r Role, addr string, network map[string]Role) (*Node, error) {
 
 	n := &Node{
 		role:    r,
@@ -70,9 +64,9 @@ func NewNode(r Role, host, port string, network map[string]Role) (*Node, error) 
 	/* Route end-points to server. */
 	if err := n.configureServer(); err != nil {
 		return nil, err
-	} else if err := n.createNodeFile(addr); err != nil {
-		return nil, err
 	} else if err := n.createNetwork(addr, network); err != nil {
+		return nil, err
+	} else if err := n.createNodeFile(addr); err != nil {
 		return nil, err
 	}
 
@@ -99,28 +93,6 @@ func (n *Node) createNetwork(addr string, network map[string]Role) error {
 		return util.ErrorFormat(errNoQuorum, accepters)
 	}
 	n.network, n.quorum = members, (accepters/2)+1
-
-	return nil
-}
-
-/* Open or overwrite value file for node, and make an initial commit.
- */
-func (n *Node) createNodeFile(addr string) error {
-
-	dir := "values"
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return err
-	}
-	file := fmt.Sprintf("%s-%s", n.Role(), addr)
-	path := path.Join(dir, file)
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	} else if err := n.Commit(n.N, n.value); err != nil {
-		return err
-	}
-	n.f = f
 
 	return nil
 }
@@ -152,7 +124,7 @@ func (n *Node) Shutdown(errchan chan error) {
 		errchan <- err
 	}
 
-	if err := n.f.Close(); err != nil {
+	if err := n.cleanupNodeFile(); err != nil {
 		errchan <- err
 	}
 

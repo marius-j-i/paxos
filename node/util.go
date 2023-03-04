@@ -1,7 +1,6 @@
 package paxos
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -42,32 +41,6 @@ func (p *Promise) setNode(n *Node) *Promise {
 	p.value = n.value
 	p.err = nil
 	return p
-}
-
-/* Persist node and update struct-members to new values.
- */
-func (n *Node) Commit(N int, v string) error {
-	format, newline := "", "\n"
-	format += "role : %s, addr : %s {" + newline
-	format += "    N       : %d," + newline
-	format += "    value   : %s," + newline
-	format += "    quorum  : %d," + newline
-	format += "    network : %v," + newline
-	format += "}" + newline
-
-	n.N, n.value = N, v
-	node := fmt.Sprintf(format,
-		n.Role(), n.server.Addr,
-		n.N,
-		n.value,
-		n.quorum,
-		n.network,
-	)
-
-	if _, err := n.f.WriteString(node); err != nil {
-		return err
-	}
-	return nil
 }
 
 /* Return variable with mux regex name in url as string.

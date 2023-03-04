@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -32,104 +31,14 @@ var (
 	acceptWindow    = 200 * time.Millisecond
 )
 
-func setup() func() {
-
-	/* Size of error channels' buffers. */
-	nErr := 16
-
-	nodes, errchan := setupNodes(nErr)
-
-	return makeTeardown(nodes, errchan)
-}
-
-func setupNodes(nErr int) ([]*paxos.Node, []chan error) {
-
-	/* Create ports and network. */
-	ports := make([]string, proposers+accepters+learners)
-	roles := make([]paxos.Role, len(ports))
-	network := make(map[string]paxos.Role, len(ports))
-	for i := range ports {
-		ports[i] = strconv.Itoa(startport + i)
-
-		role := paxos.Proposer
-		if i < proposers+accepters {
-			role = paxos.Accepter
-		} else {
-			role = paxos.Learner
-		}
-		roles[i] = role
-
-		addr := net.JoinHostPort(host, ports[i])
-		network[addr] = roles[i]
-	}
-
-	/* Create nodes with different roles. */
-	nodes := make([]*paxos.Node, len(ports))
-	errchan := make([]chan error, len(ports))
-	for i := range ports {
-
-		log.Infof("role: , ")
-		/* New node with role. */
-		n, err := paxos.NewNode(roles[i], host, ports[i], network)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		nodes[i] = n
-
-		/* Start new node. */
-		errchan[i] = make(chan error, nErr)
-		go nodes[i].Serve(errchan[i])
-	}
-	return nodes, errchan
-}
-
-func makeTeardown(nodes []*paxos.Node, errchan []chan error) func() {
-
-	/* Log-file for server errors during tests. */
-	logname := `nodes.log`
-	logfile, err := os.Create(logname)
-	if err != nil {
-		log.Fatalf("unable to create file [%s] \n", logname)
-	}
-
-	/* Routine for emptying potential errors. */
-	stop := make(chan bool)
-	go func() {
-		for len(stop) != 0 {
-			for i := range nodes {
-				if len(errchan[i]) != 0 {
-					fmt.Fprintf(logfile, "Error-channel[%d]-serve: %s \n", i, (<-errchan[i]).Error())
-				}
-			}
-		}
-		/* Stop signal received from teardown, acknowledge. */
-		<-stop
-	}()
-
-	/* Teardown definition. */
-	teardown := func() {
-		/* Send and wait for stop. */
-		stop <- true
-		for i := range nodes {
-			go nodes[i].Shutdown(errchan[i])
-		}
-		for i := 0; i < len(nodes); {
-			/* Empty errors before incrementing. */
-			if err := <-errchan[i]; err != nil {
-				fmt.Fprintf(logfile, "Error-channel[%d]-shutdown: %s \n", i, err.Error())
-				continue
-			}
-			i++
-		}
-		logfile.Close()
-	}
-	return teardown
-}
-
 func TestMain(m *testing.M) {
-	teardown := setup()
+
+	nodes, err := paxos.CreateNetwork(proposers, accepters, learners)
+	if err != nil {
+		log.Fatal(err)
+	}
 	code := m.Run()
-	teardown()
+	nodes.Close()
 	os.Exit(code)
 }
 

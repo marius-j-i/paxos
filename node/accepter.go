@@ -70,7 +70,7 @@ func (n *Node) PostAccept(w http.ResponseWriter, req *http.Request) {
 		log.Infof("reject proposal N [%d] in favor of prepare proposal N' [%d] ",
 			N, n.prepare)
 
-	} else /* Accept proposal. */ if err := n.Commit(N, v); err != nil {
+	} else /* Accept proposal. */ if err := n.commit(N, v); err != nil {
 		n.respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
