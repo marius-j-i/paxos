@@ -125,32 +125,6 @@ func (n *Node) createNodeFile(addr string) error {
 	return nil
 }
 
-/* Persist node and update struct-members to new values.
- */
-func (n *Node) Commit(N int, v string) error {
-	format, newline := "", "\n"
-	format += "role : %s, addr : %s {" + newline
-	format += "    N       : %d," + newline
-	format += "    value   : %s," + newline
-	format += "    quorum  : %d," + newline
-	format += "    network : %v," + newline
-	format += "}" + newline
-
-	n.N, n.value = N, v
-	node := fmt.Sprintf(format,
-		n.Role(), n.server.Addr,
-		n.N,
-		n.value,
-		n.quorum,
-		n.network,
-	)
-
-	if _, err := n.f.WriteString(node); err != nil {
-		return err
-	}
-	return nil
-}
-
 /* Serve requests indefinitively until Node.Shutdown is called.
  * Put any non-server-closed errors in argument channel.
  */

@@ -1,7 +1,7 @@
 
 # An implementation of Paxos 
 
-## Inspired by Leslie Lamport's Paxos Made Simple
+## Inspired by Leslie Lamport's [Paxos Made Simple](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf)
 
 ## Paxos Client
 
