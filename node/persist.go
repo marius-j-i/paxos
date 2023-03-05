@@ -13,14 +13,29 @@ import (
 
 var (
 	/* Errors. */
+	errNoRestore  = errors.New("nodes set to not restore persistent state")
 	errTypeAssert = errors.New("unable to type assert keyword {%s : %v} from type [%T] into [%s]")
 
 	/* Globals. */
-	persistAfterShutdown = false // gracefull node shutdown removes files from disk
-	nodeDir              = "nodes"
+	persistState           = true  // on true; n.commit() will not persist state
+	restorePersistentState = true  // on true; NewNode() will not read any discovered state files
+	persistAfterShutdown   = false // on false; n.Shutdown() removes files from disk
+	nodeDir                = "nodes"
 )
 
-/* Tell future shutdown calls to no cleanup persistent state.
+/* Set n.commit() to not write state to disk.
+ */
+func SetPersistState(trueOrFalse bool) {
+	persistState = trueOrFalse
+}
+
+/* Set NewNode() behaviour to avoid restoring persistent state.
+ */
+func SetRestorePersistentState(trueOrFalse bool) {
+	restorePersistentState = trueOrFalse
+}
+
+/* Set future n.Shutdown() behaviour related to cleanup of persistent state.
  */
 func SetPersistAfterShutdown(trueOrFalse bool) {
 	persistAfterShutdown = trueOrFalse
@@ -37,6 +52,9 @@ func SetNodeDirectory(path string) {
  */
 func (n *Node) createNodeFile(addr string) error {
 
+	if !persistState {
+		return nil
+	}
 	/* Directory for node. */
 	if err := os.MkdirAll(nodeDir, os.ModePerm); err != nil {
 		return err
@@ -64,6 +82,10 @@ func (n *Node) createNodeFile(addr string) error {
  */
 func (n *Node) commit(N int, v string) error {
 	n.N, n.value = N, v
+
+	if !persistState {
+		return nil
+	}
 	/* State to persist. */
 	node := map[string]interface{}{
 		"role":    n.role,
@@ -90,6 +112,9 @@ func (n *Node) commit(N int, v string) error {
 func (n *Node) restore(path string) error {
 	var node map[string]interface{}
 
+	if !restorePersistentState {
+		return errNoRestore
+	}
 	/* Open to read and write. */
 	f, err := os.OpenFile(path, os.O_RDWR, os.ModePerm)
 	if err != nil {
@@ -115,7 +140,6 @@ func (n *Node) restore(path string) error {
 		/* Convert to correct types. */
 		n.N, n.prepare, n.value = int(N), int(prepare), value
 	}
-
 	return nil
 }
 
@@ -124,6 +148,9 @@ func (n *Node) restore(path string) error {
  */
 func (n *Node) cleanupNodeFile() error {
 
+	if !persistState {
+		return nil
+	}
 	path := n.f.Name()
 	if err := n.f.Close(); err != nil {
 		return err

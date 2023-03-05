@@ -80,6 +80,7 @@ func (n *Node) createNetwork(addr string, network map[string]Role) error {
 
 	members := map[string]Role{}
 	accepters := 0
+	/* Create network without self and count required quorum. */
 	for member, role := range network {
 		if member != addr {
 			members[member] = role
@@ -93,7 +94,6 @@ func (n *Node) createNetwork(addr string, network map[string]Role) error {
 		return util.ErrorFormat(errNoQuorum, accepters)
 	}
 	n.network, n.quorum = members, (accepters/2)+1
-
 	return nil
 }
 

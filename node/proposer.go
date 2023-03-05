@@ -50,10 +50,11 @@ func (n *Node) PostPropose(w http.ResponseWriter, req *http.Request) {
 			n.respondError(w, code, err.Error())
 			return
 		} else if code == http.StatusCreated {
-			w.WriteHeader(http.StatusCreated)
 			break
 		}
 	}
+	/* Proposal complete. */
+	w.WriteHeader(http.StatusCreated)
 }
 
 /* Proposer attempt a proposal.
@@ -70,6 +71,7 @@ func (n *Node) postPropose(v string) (int, error) {
 
 	/* New proposal. */
 	N = n.N + 1
+	n.prepare = N
 
 	/* Prepare-phase. */
 	quorum, NPrime, vPrime = n.Prepare(N, v)
@@ -89,10 +91,7 @@ func (n *Node) postPropose(v string) (int, error) {
 	}
 
 	/* Accept-phase. */
-	NPrime, _ = n.Accept(N, v)
-	if NPrime >= N {
-		log.Infof("proposal accept phase with N' >= N: %d >= %d", NPrime, N)
-	}
+	n.Accept(N, v)
 
 	/* Commit proposal.
 	 *
@@ -136,7 +135,6 @@ func (n *Node) Prepare(N int, v string) (bool, int, string) {
  * Proposer concurrently POSTs to accepters to prepare proposal.
  */
 func (n *Node) prepareFanOut(N int, promises chan *Promise) {
-	formatPrepareUrl := "%s/prepare/%d"
 
 	/* Go routine. */
 	prepare := func(url string) {
@@ -160,7 +158,7 @@ func (n *Node) prepareFanOut(N int, promises chan *Promise) {
 		if role != Accepter {
 			continue
 		}
-		url := fmt.Sprintf(formatPrepareUrl, addr, N)
+		url := util.HttpUrl(addr, "prepare", N)
 		go prepare(url)
 	}
 }
@@ -177,7 +175,7 @@ func (n *Node) prepareFanOut(N int, promises chan *Promise) {
 func (n *Node) prepareFanIn(N int, v string, promises chan *Promise) (bool, int, string) {
 
 	quorum := 0
-	for len(promises) > 0 {
+	for range n.network {
 		p := <-promises
 		if p.err != nil {
 			log.Info(p.err)
@@ -219,7 +217,6 @@ func (n *Node) Accept(N int, v string) (int, string) {
  * Proposer concurrently POSTs to both accepters and learners.
  */
 func (n *Node) acceptFanOut(N int, v string, promises chan *Promise) {
-	formatAcceptUrl := "%s/accept/%d/%s"
 
 	/* Go routine. */
 	accept := func(url string) {
@@ -243,7 +240,7 @@ func (n *Node) acceptFanOut(N int, v string, promises chan *Promise) {
 		if role != Accepter && role != Learner {
 			continue
 		}
-		url := fmt.Sprintf(formatAcceptUrl, addr, N, v)
+		url := util.HttpUrl(addr, "accept", N, v)
 		go accept(url)
 	}
 }
@@ -277,8 +274,8 @@ func (n *Node) acceptFanIn(N int, v string, promises chan *Promise) {
 			quorum++
 		}
 	}
-	summary = fmt.Sprintf("accept-quorum (accepters + learners) := %d/%d \n%s",
-		quorum, n.LenRoles(Accepter)+n.LenRoles(Learner), summary)
+	summary = fmt.Sprintf("accept complete quorum := %d/%d for N := [%d] \n%s",
+		quorum, n.LenRoles(Accepter)+n.LenRoles(Learner), N, summary)
 
 	/* Accept phase complete. */
 	log.Info(summary)

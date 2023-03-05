@@ -94,7 +94,7 @@ func (n *Node) Role() string {
 	return roles[n.role]
 }
 
-/* Return number of members with arguemtn role in network.
+/* Return number of members with argument role in network.
  */
 func (n *Node) LenRoles(r Role) (members int) {
 	for _, role := range n.network {

@@ -33,7 +33,7 @@ var (
 
 func TestMain(m *testing.M) {
 
-	nodes, err := paxos.CreateNetwork(proposers, accepters, learners)
+	nodes, err := paxos.NewNetwork(proposers, accepters, learners)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/marius-j-i/paxos/util"
 )
 
 var (
@@ -80,7 +81,7 @@ func (n *Node) checkAlive(r Role) ([]string, error) {
 		if role != r {
 			continue
 		}
-		url := addr + GetAlive
+		url := util.HttpUrl(addr, GetAlive)
 		go ping(url, alive)
 	}
 

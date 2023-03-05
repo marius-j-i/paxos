@@ -29,7 +29,7 @@ func (n *Node) PostPrepare(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	/* No promise to a higher proposal. */
-	if N < n.prepare {
+	if n.prepare < N {
 		n.prepare = N
 	} /* else; create promise with N' > N. */
 	p := newPromise().setNode(n)
@@ -38,7 +38,7 @@ func (n *Node) PostPrepare(w http.ResponseWriter, req *http.Request) {
 		n.respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	// w.WriteHeader(http.StatusOK)
 }
 
 /* /accept
@@ -66,7 +66,7 @@ func (n *Node) PostAccept(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	/* Reject accept proposal. */
-	if N != n.prepare {
+	if N < n.prepare {
 		log.Infof("reject proposal N [%d] in favor of prepare proposal N' [%d] ",
 			N, n.prepare)
 
@@ -80,5 +80,5 @@ func (n *Node) PostAccept(w http.ResponseWriter, req *http.Request) {
 		n.respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	// w.WriteHeader(http.StatusOK)
 }
