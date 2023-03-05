@@ -20,8 +20,8 @@ func ErrorFormat(err error, formats ...interface{}) error {
  */
 func HttpUrl(addr, endpoint string, args ...interface{}) string {
 	url := fmt.Sprintf("http://%s/%s", addr, endpoint)
-	for a := range args {
-		url = fmt.Sprintf("%s/%s", url, fmt.Sprint(a))
+	for _, a := range args {
+		url = fmt.Sprintf("%s/%v", url, a)
 	}
 	return url
 }
