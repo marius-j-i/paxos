@@ -3,6 +3,8 @@ package util
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 )
 
 var (
@@ -24,4 +26,15 @@ func HttpUrl(addr, endpoint string, args ...interface{}) string {
 		url = fmt.Sprintf("%s/%v", url, a)
 	}
 	return url
+}
+
+/* Select a random timeout from interval to wait for; then return.
+ */
+func RandTimeout(lower, upper int, unit time.Duration) {
+
+	t := rand.Intn(upper-lower) + lower
+	d := time.Duration(t) * unit
+
+	wait := time.NewTimer(d)
+	<-wait.C
 }

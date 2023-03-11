@@ -260,7 +260,7 @@ func (n *Node) acceptFanIn(N int, v string, promises chan *Promise) {
 		}
 		p := <-promises
 		if p.err != nil {
-			log.Info(p.err)
+			log.Debug(p.err)
 			continue
 		} else /* Promised to a higher proposal. */ if p.prepare >= N {
 			summary += fmt.Sprintf("accept-promise from [%s] {prepare>=N : %d>=%d, values : [%s, %s]} \n",
@@ -278,5 +278,5 @@ func (n *Node) acceptFanIn(N int, v string, promises chan *Promise) {
 		quorum, n.LenRoles(Accepter)+n.LenRoles(Learner), N, summary)
 
 	/* Accept phase complete. */
-	log.Info(summary)
+	log.Debug(summary)
 }

@@ -1,7 +1,6 @@
 package paxos
 
 import (
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -75,12 +74,7 @@ func (n *Node) getVarInt(req *http.Request, name string) (int, error) {
 /* Select a random timeout from interval to wait for; then return.
  */
 func (n *Node) timeout(lower, upper int, unit time.Duration) {
-
-	t := rand.Intn(upper-lower) + lower
-	d := time.Duration(t) * unit
-
-	wait := time.NewTimer(d)
-	<-wait.C
+	util.RandTimeout(lower, upper, unit)
 }
 
 /* Return string description of nodes' role.

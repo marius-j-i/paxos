@@ -17,19 +17,20 @@ import (
 
 var (
 	/* Errors. */
-	errWrongStatusCode = errors.New("wron status code: expected %v, got %v")
+	errWrongStatusCode = errors.New("wrong status code: expected %v, got %v")
 
 	/* Network parameters. */
-	proposers = 1
-	accepters = 3
-	learners  = 1
+	proposers = 9
+	accepters = 19
+	learners  = 11
 	network   = &Network{} // global reference to instanciated network
 	msPerNode = 50         // ms per node in network to wait until stabilization
 
 	/* Run-time. */
 	testDirOut = "test-nodes" // output directory for testing.
 	persist    = false
-	emptyBody  = bytes.NewReader([]byte{})
+	// persist    = true
+	emptyBody = bytes.NewReader([]byte{})
 )
 
 /* Setup network and return teardown method. */
@@ -86,9 +87,49 @@ func TestProposer(t *testing.T) {
 			resp.Body.Close()
 		}
 	}
-	/* Wait a certain number of ms for each node to be ready. */
-	ms := time.Duration(network.Len() * msPerNode)
-	time.Sleep(ms * time.Millisecond)
+	/* Assert consensus. */
+	if _, v, err := network.Consensus(); err != nil {
+		failTest(t, err)
+	} else if value, err := strconv.Atoi(v); err != nil {
+		failTest(t, err)
+	} else if value != proposals {
+		assert.Equal(t, proposals, value)
+	}
+}
+
+func TestProposerConcurrent(t *testing.T) {
+
+	/* Async method. */
+	propose := func(p *Node, v int, c chan error) {
+		/* Initiate proposal. */
+		url := util.HttpUrl(p.server.Addr, "propose", v+1)
+		if resp, err := http.Post(url, contentTypeBytes, emptyBody); err != nil {
+			c <- err
+		} else if resp.StatusCode != http.StatusCreated {
+			c <- util.ErrorFormat(errWrongStatusCode, resp.Status, http.StatusText(http.StatusCreated))
+		} else {
+			resp.Body.Close()
+			c <- nil
+		}
+	}
+
+	P, _, _ := network.Members()
+
+	/* Do proposals. */
+	proposals := 8
+	fan := make(chan error, proposals)
+	/* Concurrent fan-out. */
+	for N := 0; N < proposals; N++ {
+		/* Random proposer. */
+		proposer := P[rand.Int()%len(P)]
+		go propose(proposer, N, fan)
+	}
+	/* Fan-in. */
+	for N := 0; N < proposals; N++ {
+		if err := <-fan; err != nil {
+			t.Error(err)
+		}
+	}
 	/* Assert consensus. */
 	if _, v, err := network.Consensus(); err != nil {
 		failTest(t, err)
